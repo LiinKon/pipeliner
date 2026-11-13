@@ -248,6 +248,7 @@ mark{background:rgba(236,230,216,.13);color:var(--ink);border-radius:3px;box-sha
 .empty{text-align:center;padding:60px 20px;color:var(--mute);animation:rise .5s var(--ease) backwards}
 .empty .e-ico{width:84px;height:84px;margin:0 auto 18px;opacity:.9}
 .empty h4{font-family:Unbounded;font-weight:600;font-size:17px;color:var(--ink);margin-bottom:8px}
+.empty .btn{flex:none;width:200px;padding:0 20px}
 .empty p{font-size:14px;line-height:1.5;max-width:300px;margin:0 auto 18px}
 
 /* inline drafts */

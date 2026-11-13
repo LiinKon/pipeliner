@@ -51,39 +51,7 @@ const TYPES = [
 const typeLabel = k => (TYPES.find(t => t.k === k) || TYPES[0]).label;
 
 /* ================= data ================= */
-const KEY = 'pipeliner.v1';
-function seed() {
-  const now = Date.now(), H = 3600e3, D = 24 * H;
-  const S = { id: 'start', type: 'start' };
-  const mk = (nodes, edges) => ({ nodes: [S, ...nodes.map(([id, type, title, desc]) => ({ id, type, title, desc: desc || '' }))], edges: edges.map(([from, to]) => ({ from, to })) });
-  return { projects: [
-    { id: uid(), name: 'Кампания D&D', updated: now - 2 * H, plans: [
-      { id: uid(), name: 'Акт II — Винодельня', updated: now - 2 * H, ...mk([
-        ['a1', 'dialog', 'Встреча с виноторговцем', 'Торговец нервничает и путается в датах поставок. Если надавить — проговорится про погреба под винодельней.'],
-        ['a2', 'scene', 'Приезд на винодельню', 'Сумерки, пустой двор, ворота открыты. На бочках свежие метки, которых нет в накладных.'],
-        ['a3', 'scene', 'Путь к замку', ''],
-        ['a4', 'choice', 'Спуск в погреба', 'Развилка: тихо через сток или открыто через главный вход.'],
-        ['a5', 'fight', 'Стража погребов', 'Двое наёмников и сторожевой пёс. Можно обойти проверкой Скрытности.'],
-        ['a6', 'scene', 'Ворота замка', 'Обе ветки сходятся здесь.']
-      ], [['start', 'a1'], ['a1', 'a2'], ['a2', 'a3'], ['a2', 'a4'], ['a4', 'a5'], ['a3', 'a6'], ['a5', 'a6']]) },
-      { id: uid(), name: 'Акт I — Пролог', updated: now - 3 * D, ...mk([
-        ['b1', 'scene', 'Таверна «Кривой гвоздь»', 'Сбор партии, знакомство.'],
-        ['b2', 'dialog', 'Заказчик в капюшоне', ''],
-        ['b3', 'fight', 'Засада на тракте', '']
-      ], [['start', 'b1'], ['b1', 'b2'], ['b2', 'b3']]) }
-    ] },
-    { id: uid(), name: 'Pipeliner', updated: now - 5 * H, plans: [
-      { id: uid(), name: 'MVP', updated: now - 5 * H, ...mk([
-        ['c1', 'task', 'Макет на телефоне', 'Проекты, поиск, схема из труб, создание шага стрелкой.'],
-        ['c2', 'task', 'Редактор схем', ''],
-        ['c3', 'task', 'Анимации', 'Появление шага, «прокладка» трубы, приглушение остальных шагов.'],
-        ['c4', 'task', 'Адаптация под браузер', 'Горизонтальная схема, док-панель справа.'],
-        ['c5', 'task', 'Синхронизация', '']
-      ], [['start', 'c1'], ['c1', 'c2'], ['c1', 'c3'], ['c2', 'c4'], ['c3', 'c4'], ['c4', 'c5']]) }
-    ] },
-    { id: uid(), name: 'Переезд', updated: now - 9 * D, plans: [] }
-  ] };
-}
+const KEY = 'pipeliner.data';
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY));
@@ -92,7 +60,9 @@ function load() {
     return d;
   } catch (e) { return null; }
 }
-let db = load() || seed();
+let db = load() || { projects: [] };
+// данные времён макета (старый ключ) удаляем полностью
+try { localStorage.removeItem('pipeliner.v1'); localStorage.removeItem('pipeliner.demoCleaned'); } catch (e) {}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
 const proj = id => db.projects.find(p => p.id === id);
 const plan = (pid, plid) => proj(pid)?.plans.find(p => p.id === plid);
