@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Pipeliner</title>
+<meta name="theme-color" content="#121310">
+<meta name="description" content="Pipeliner — планы из шагов, соединённых трубами">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <div id="main"><div id="views"></div></div>
+  <div id="scrim" data-act="close-drawer"></div>
+  <aside id="drawer">
+    <div class="d-head">
+      <div class="logo" id="d-logo"></div>
+      <button class="icon-btn d-close" data-act="close-drawer" aria-label="Закрыть" id="d-close"></button>
+    </div>
+    <div class="d-tiles">
+      <button class="dtile" data-act="new-project"><span class="coupling">+</span><b>Проект</b><span class="mono">новая папка</span></button>
+      <button class="dtile" data-act="new-plan"><span class="coupling">+</span><b>План</b><span class="mono">новая схема</span></button>
+    </div>
+    <div class="d-label mono">Навигация</div>
+    <nav class="dnav" id="dnav"></nav>
+    <div class="d-tools">
+      <button class="d-tool" data-act="export-all">Экспорт всего</button>
+      <button class="d-tool" data-act="import">Импорт из файла</button>
+      <button class="d-tool wide" id="backupBtn" data-act="backup" hidden>Резервные копии: выключены</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <div class="d-foot mono">Pipeliner · <span id="appVer">1.0.0</span><br><span id="whereData">данные хранятся в этом браузере</span></div>
+  </aside>
+</div>
+<div id="sheet-root"></div>
+<div id="toast"></div>
+
+<script src="app.js?v=1"></script>
+</body>
+</html>
