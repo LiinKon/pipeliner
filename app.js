@@ -7,12 +7,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = t => 1 - Math.pow(1 - t, 4);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const APP_VERSION = '1.0.0';
-// приложение для ПК (Tauri): те же файлы, что у сайта, плюс «Сохранить как…» и резервные копии в папку
-const DESKTOP = !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
-const tauriInvoke = (cmd, args) => (window.__TAURI__?.core?.invoke || window.__TAURI_INTERNALS__.invoke)(cmd, args);
-const BK_KEY = 'pipeliner.backupDir';
-let backupDir = ''; try { backupDir = DESKTOP ? localStorage.getItem(BK_KEY) || '' : ''; } catch (e) {}
-let backupTimer = null, lastBackupAt = null;
+
 const h = html => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 function plural(n, f) { const a = Math.abs(n) % 100, b = a % 10; return n + ' ' + (a > 10 && a < 20 ? f[2] : b > 1 && b < 5 ? f[1] : b === 1 ? f[0] : f[2]); }
 const PL = { plan: ['план', 'плана', 'планов'], step: ['шаг', 'шага', 'шагов'] };
@@ -98,7 +93,7 @@ function load() {
   } catch (e) { return null; }
 }
 let db = load() || seed();
-function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} scheduleBackup(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
 const proj = id => db.projects.find(p => p.id === id);
 const plan = (pid, plid) => proj(pid)?.plans.find(p => p.id === plid);
 const stepCount = pl => pl.nodes.length - 1;
@@ -800,7 +795,6 @@ document.addEventListener('click', e => {
     case 'rename-plan': renamePlan(); break;
     case 'export-all': exportAll(); break;
     case 'import': importMode = 'add'; $('#importFile').click(); break;
-    case 'backup': backupMenu(); break;
     case 'project-more': {
       const p = proj(st.pid);
       optionsSheet(p.name, [
@@ -828,28 +822,20 @@ document.addEventListener('keydown', e => {
 
 /* ================= экспорт / импорт ================= */
 const dayStamp = () => new Date().toISOString().slice(0, 10);
-async function saveBlob(name, blob, ext, label) {
-  name = String(name).replace(/[\\/:*?"<>|]+/g, '_');
-  if (!DESKTOP) {
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.' + ext;
-    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-    return true;
-  }
-  try {
-    const path = await tauriInvoke('plugin:dialog|save', { options: { defaultPath: name + '.' + ext, filters: [{ name: label || ext, extensions: [ext] }] } });
-    if (!path) return false;
-    await tauriInvoke('write_file', { path, data: Array.from(new Uint8Array(await blob.arrayBuffer())) });
-    toast('Сохранено: ' + String(path).split(/[\\/]/).pop()); return true;
-  } catch (err) { toast('Не удалось сохранить файл: ' + err); return false; }
+function saveBlob(name, blob, ext) {
+  name = String(name).replace(/[\/:*?"<>|]+/g, '_');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.' + ext;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  return true;
 }
 const packJSON = (kind, projects) => new Blob([JSON.stringify({ app: 'pipeliner', kind, version: 1, exported: new Date().toISOString(), projects }, null, 1)], { type: 'application/json' });
 async function exportAll() {
   closeDrawer();
   if (!db.projects.length) return toast('Пока нечего экспортировать');
-  if (await saveBlob(`Pipeliner — все проекты ${dayStamp()}`, packJSON('workspace', db.projects), 'json', 'Pipeliner (JSON)') && !DESKTOP) toast('Файл сохранён в загрузки');
+  if (await saveBlob(`Pipeliner — все проекты ${dayStamp()}`, packJSON('workspace', db.projects), 'json', 'Pipeliner (JSON)')) toast('Файл сохранён в загрузки');
 }
 async function exportProject(p) {
-  if (await saveBlob(`Pipeliner — ${p.name}`, packJSON('project', [p]), 'json', 'Pipeliner (JSON)') && !DESKTOP) toast('Файл сохранён в загрузки');
+  if (await saveBlob(`Pipeliner — ${p.name}`, packJSON('project', [p]), 'json', 'Pipeliner (JSON)')) toast('Файл сохранён в загрузки');
 }
 function validPack(d) {
   return d && d.app === 'pipeliner' && Array.isArray(d.projects) &&
@@ -881,45 +867,6 @@ $('#importFile').addEventListener('change', async e => {
   toast('Добавлено: ' + plural(d.projects.length, ['проект', 'проекта', 'проектов']));
 });
 
-/* ================= резервные копии (только приложение для ПК) ================= */
-function scheduleBackup() { if (!DESKTOP || !backupDir) return; clearTimeout(backupTimer); backupTimer = setTimeout(doBackup, 5000); }
-async function doBackup(manual) {
-  clearTimeout(backupTimer); backupTimer = null;
-  if (!DESKTOP || !backupDir) return;
-  try {
-    await tauriInvoke('write_backup', { dir: backupDir, latestName: 'Pipeliner — все проекты.json', dailyPrefix: 'Pipeliner — бэкап ',
-      dailyName: `Pipeliner — бэкап ${dayStamp()}.json`, contents: JSON.stringify({ app: 'pipeliner', kind: 'workspace', version: 1, exported: new Date().toISOString(), projects: db.projects }), keep: 14 });
-    lastBackupAt = new Date(); renderBackupBtn();
-    if (manual) toast('Копия сохранена');
-  } catch (err) { toast('Резервная копия не записалась: ' + err); }
-}
-function renderBackupBtn() {
-  const b = $('#backupBtn'); if (!b) return;
-  const folder = backupDir ? backupDir.split(/[\\/]/).filter(Boolean).pop() : '';
-  b.textContent = backupDir ? `Резервные копии: ${folder}` + (lastBackupAt ? ` · ${lastBackupAt.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })}` : '') : 'Резервные копии: выключены';
-  b.title = backupDir || 'Выберите папку — приложение будет само сохранять туда копию всех проектов';
-}
-async function chooseBackupDir() {
-  try {
-    const dir = await tauriInvoke('plugin:dialog|open', { options: { directory: true, multiple: false, title: 'Папка для резервных копий Pipeliner' } });
-    if (!dir) return;
-    backupDir = Array.isArray(dir) ? dir[0] : dir;
-    try { localStorage.setItem(BK_KEY, backupDir); } catch (e) {}
-    renderBackupBtn(); await doBackup(true);
-  } catch (err) { toast('Не удалось выбрать папку: ' + err); }
-}
-function backupMenu() {
-  const opts = [{ label: backupDir ? 'Сменить папку…' : 'Выбрать папку…', fn: chooseBackupDir }];
-  if (backupDir) opts.push({ label: 'Сохранить копию сейчас', fn: () => doBackup(true) },
-    { label: 'Выключить копии', fn: () => { backupDir = ''; try { localStorage.removeItem(BK_KEY); } catch (e) {} renderBackupBtn(); } });
-  opts.push({ label: 'Восстановить из копии (заменить всё)…', danger: true, fn: () => { importMode = 'restore'; $('#importFile').click(); } });
-  optionsSheet('Резервные копии', opts);
-}
-if (DESKTOP) {
-  document.body.classList.add('desktop');
-  $('#backupBtn').hidden = false; renderBackupBtn();
-  $('#whereData').textContent = 'данные хранятся в приложении на этом ПК';
-}
 $('#appVer').textContent = APP_VERSION;
 
 /* boot */
