@@ -4,7 +4,7 @@
 
 Работает в браузере: телефон в приоритете, на ПК — горизонтальная схема.
 
-## Сайт https://liinkon.github.io/pipeliner/
+## Сайт
 
 Включается через GitHub Pages: **Settings → Pages → Source: Deploy from a branch → Branch: `main`, папка `/ (root)` → Save**. Через минуту сайт откроется по адресу `https://<логин>.github.io/<репозиторий>/`.
 
